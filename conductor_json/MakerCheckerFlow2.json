@@ -1,0 +1,130 @@
+{
+  "createTime": 1705000056222,
+  "updateTime": 1705065080517,
+  "accessPolicy": {},
+  "name": "MakerCheckerFlow2",
+  "description": "Simple checker maker flow with HTTP and SIMPLE tasks and custom workers",
+  "version": 11,
+  "tasks": [
+    {
+      "name": "NotifyCheckerRequest",
+      "taskReferenceName": "notify_checker_request",
+      "inputParameters": {
+        "http_request": {
+          "method": "GET",
+          "uri": "https://reqres.in/api/users/2",
+          "contentType": "application/json",
+          "body": {
+            "userId": "${workflow.input.userId}",
+            "checkerDL": "${workflow.input.userId}",
+            "makerEmail": "${workflow.input.makerEmail}"
+          }
+        }
+      },
+      "type": "HTTP",
+      "startDelay": 0,
+      "optional": false,
+      "asyncComplete": false
+    },
+    {
+      "name": "CheckerDecision",
+      "taskReferenceName": "checker_human_decision",
+      "inputParameters": {
+        "question": "Approve Request ?",
+        "options": [
+          "APPROVED",
+          "REJECTED"
+        ]
+      },
+      "type": "HUMAN",
+      "startDelay": 0,
+      "optional": false,
+      "asyncComplete": false
+    },
+    {
+      "name": "CheckerDecisionLogic",
+      "taskReferenceName": "checker_decision_logic_ref",
+      "inputParameters": {
+        "switchCaseValue": "${checker_human_decision.output.selectedOption}"
+      },
+      "type": "SWITCH",
+      "decisionCases": {
+        "APPROVED": [
+          {
+            "name": "dp_process_update_approved",
+            "taskReferenceName": "process_updated_approved",
+            "inputParameters": {},
+            "type": "SIMPLE",
+            "startDelay": 0,
+            "optional": false,
+            "asyncComplete": false
+          }
+        ],
+        "REJECTED": [
+          {
+            "name": "dp_process_update_rejected",
+            "taskReferenceName": "process_updated_rejected",
+            "inputParameters": {},
+            "type": "SIMPLE",
+            "startDelay": 0,
+            "optional": false,
+            "asyncComplete": false
+          }
+        ]
+      },
+      "defaultCase": [
+        {
+          "type": "TERMINATE",
+          "name": "terminate_flow",
+          "taskReferenceName": "terminate_flow_ref",
+          "terminationStatus": "FAILED"
+        }
+      ],
+      "startDelay": 0,
+      "optional": false,
+      "asyncComplete": false,
+      "evaluatorType": "value-param",
+      "expression": "switchCaseValue"
+    },
+    {
+      "name": "NotifyMakerRequest",
+      "taskReferenceName": "NotifyMakerRequest",
+      "inputParameters": {
+        "http_request": {
+          "method": "GET",
+          "uri": "https://reqres.in/api/users/2",
+          "contentType": "application/json",
+          "body": {
+            "type": "EMAIL",
+            "decision": "${checker_decision_logic_ref.output.selectedCase}",
+            "userId": "${workflow.input.userId}",
+            "email": "${workflow.input.makerEmail}"
+          }
+        }
+      },
+      "type": "HTTP",
+      "startDelay": 0,
+      "optional": false,
+      "asyncComplete": false
+    }
+  ],
+  "inputParameters": [
+    "userId",
+    "dimension_id",
+    "eff_month",
+    "eff_year",
+    "instrument_id"
+  ],
+  "outputParameters": {
+    "userId": "${workflow.input.userId}",
+    "result": "${checker_decision_logic_ref.output.selectedCase}"
+  },
+  "schemaVersion": 2,
+  "restartable": true,
+  "workflowStatusListenerEnabled": false,
+  "ownerEmail": "example@email.com",
+  "timeoutPolicy": "ALERT_ONLY",
+  "timeoutSeconds": 0,
+  "variables": {},
+  "inputTemplate": {}
+}
